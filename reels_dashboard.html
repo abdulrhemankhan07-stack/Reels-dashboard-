@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Reels Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f8f6f1;
+    --surface: #ffffff;
+    --border: #e8e3db;
+    --text: #1a1714;
+    --muted: #7a736a;
+    --accent-a: #e63946;      /* Androon - red */
+    --accent-d: #2563eb;      /* Drift - blue */
+    --accent-gold: #d4a017;
+    --accent-green: #16a34a;
+    --accent-pink: #db2777;
+    --radius: 12px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    padding: 20px 24px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .header-title h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.3rem, 3.5vw, 2rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .header-title p {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-family: 'Space Mono', monospace;
+  }
+  .status-badge {
+    background: #dcfce7;
+    color: #15803d;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid #86efac;
+    white-space: nowrap;
+    margin-top: 4px;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: #22c55e;
+    border-radius: 50%;
+    margin-right: 5px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  /* ── NAV TABS ── */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 0;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+  .nav-btn:hover { color: var(--text); background: var(--bg); border-radius: 8px 8px 0 0; }
+  .nav-btn.active { color: var(--text); border-bottom-color: var(--text); }
+  .nav-btn.tab-a.active { border-bottom-color: var(--accent-a); color: var(--accent-a); }
+  .nav-btn.tab-d.active { border-bottom-color: var(--accent-d); color: var(--accent-d); }
+  .nav-btn.tab-c.active { border-bottom-color: var(--accent-gold); color: var(--accent-gold); }
+
+  /* ── MAIN CONTENT ── */
+  main { padding: 24px 20px 48px; max-width: 1280px; margin: 0 auto; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── SECTION HEADERS ── */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    margin-top: 32px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── METRIC CARDS ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .metric-card .label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .metric-card .value {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    line-height: 1;
+    color: var(--text);
+  }
+  .metric-card .sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+  .metric-card.highlight-a { border-left: 4px solid var(--accent-a); }
+  .metric-card.highlight-d { border-left: 4px solid var(--accent-d); }
+  .metric-card.highlight-g { border-left: 4px solid var(--accent-green); }
+  .metric-card.highlight-p { border-left: 4px solid var(--accent-pink); }
+  .metric-card.highlight-gold { border-left: 4px solid var(--accent-gold); }
+  .badge-good { display: inline-block; background: #dcfce7; color: #15803d; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; margin-top: 5px; font-family: 'Space Mono', monospace; }
+  .badge-warn { display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; margin-top: 5px; font-family: 'Space Mono', monospace; }
+  .badge-bad  { display: inline-block; background: #fee2e2; color: #991b1b; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; margin-top: 5px; font-family: 'Space Mono', monospace; }
+
+  /* ── CHART CARDS ── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .chart-card h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .chart-card .chart-note {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 10px;
+    font-style: italic;
+  }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap-tall { position: relative; height: 280px; }
+  .chart-wrap-sm { position: relative; height: 180px; }
+
+  /* ── FULL WIDTH CHART ── */
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-wrap-full { position: relative; height: 240px; }
+
+  /* ── INSIGHTS / ACTION BOX ── */
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  .insight-card h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .insight-card ul { list-style: none; }
+  .insight-card li {
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    line-height: 1.4;
+  }
+  .insight-card li:last-child { border-bottom: none; }
+  .insight-card li .icon { flex-shrink: 0; }
+  .insight-card.strengths { border-top: 3px solid var(--accent-green); }
+  .insight-card.alerts    { border-top: 3px solid var(--accent-a); }
+  .insight-card.actions   { border-top: 3px solid var(--accent-d); }
+
+  /* ── COMPARISON BARS ── */
+  .comp-bar-wrap { margin: 8px 0; }
+  .comp-label { font-size: 0.78rem; font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .comp-bar-track { background: #f0ece5; border-radius: 99px; height: 10px; position: relative; overflow: hidden; }
+  .comp-bar-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+  .comp-bar-fill.a { background: var(--accent-a); }
+  .comp-bar-fill.d { background: var(--accent-d); }
+
+  /* ── VERDICT BOX ── */
+  .verdict-box {
+    background: linear-gradient(135deg, #1a1714 0%, #2d2520 100%);
+    color: white;
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-top: 28px;
+    box-shadow: var(--shadow-lg);
+  }
+  .verdict-box h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 14px;
+    color: #f8f6f1;
+  }
+  .verdict-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .verdict-item { background: rgba(255,255,255,0.06); border-radius: 8px; padding: 14px; }
+  .verdict-item .v-label { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .verdict-item .v-val { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: white; }
+  .verdict-item .v-note { font-size: 0.75rem; color: rgba(255,255,255,0.55); margin-top: 4px; }
+  .winner-tag { display: inline-block; background: var(--accent-gold); color: #1a1714; font-family: 'Space Mono', monospace; font-size: 0.65rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; margin-left: 8px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .site-header { padding: 16px 16px 0; }
+    main { padding: 16px 14px 48px; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .insight-grid { grid-template-columns: 1fr; }
+    .verdict-grid { grid-template-columns: repeat(2, 1fr); }
+    .metric-card { padding: 14px 12px; }
+    .chart-card { padding: 14px; }
+    .nav-btn { padding: 8px 14px; font-size: 0.78rem; }
+    .verdict-box { padding: 18px; }
+  }
+
+  /* ── REEL TAG ── */
+  .reel-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 99px;
+    margin-bottom: 16px;
+  }
+  .reel-tag.androon { background: #fef2f2; color: var(--accent-a); border: 1px solid #fecaca; }
+  .reel-tag.drift   { background: #eff6ff; color: var(--accent-d); border: 1px solid #bfdbfe; }
+
+  /* ── PROGRESS RING ── */
+  .ring-wrap { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
+  .ring-item { text-align: center; }
+  .ring-item svg { display: block; margin: 0 auto; }
+  .ring-item .ring-label { font-size: 0.75rem; color: var(--muted); margin-top: 6px; font-weight: 600; }
+
+  /* ── HEADER REEL COLOR BARS ── */
+  .color-bar { height: 4px; border-radius: 2px; width: 32px; display: inline-block; vertical-align: middle; margin-right: 5px; }
+  .color-bar.a { background: var(--accent-a); }
+  .color-bar.d { background: var(--accent-d); }
+
+  /* ── TIMELINE LEGEND ITEMS ── */
+  .chart-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chart-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--muted); }
+  .chart-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ STICKY HEADER + NAV ═══════ -->
+<header class="site-header">
+  <div class="header-top">
+    <div class="header-title">
+      <h1>Instagram Reels Intelligence</h1>
+      <p>ANDROON LAHORE · DRIFT/DREAM · COMPARATIVE ANALYSIS</p>
+    </div>
+    <div class="status-badge"><span class="status-dot"></span>POST-LAUNCH · 12H DATA</div>
+  </div>
+  <nav class="nav-tabs">
+    <button class="nav-btn tab-a active" onclick="switchTab('androon', this)">📍 Androon Lahore</button>
+    <button class="nav-btn tab-d" onclick="switchTab('drift', this)">🌀 Drift / Dream</button>
+    <button class="nav-btn tab-c" onclick="switchTab('compare', this)">⚖️ Head-to-Head</button>
+    <button class="nav-btn" onclick="switchTab('insights', this)">💡 Strategy</button>
+  </nav>
+</header>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 1 — ANDROON LAHORE                       -->
+<!-- ═══════════════════════════════════════════ -->
+<main>
+<div id="tab-androon" class="tab-panel active">
+  <div class="reel-tag androon">● ANDROON LAHORE · 1:59 REEL</div>
+
+  <!-- KPI CARDS -->
+  <div class="section-label">Core Metrics</div>
+  <div class="metrics-grid">
+    <div class="metric-card highlight-a">
+      <div class="label">Total Views</div>
+      <div class="value">1,818</div>
+      <div class="sub">at 12h post-launch</div>
+    </div>
+    <div class="metric-card highlight-g">
+      <div class="label">Unique Reach</div>
+      <div class="value">1,103</div>
+      <div class="sub">unique viewers</div>
+    </div>
+    <div class="metric-card highlight-p">
+      <div class="label">Engagement Rate</div>
+      <div class="value">19.6%</div>
+      <div class="sub"><span class="badge-good">4× INDUSTRY AVG</span></div>
+    </div>
+    <div class="metric-card highlight-gold">
+      <div class="label">Replay Signal</div>
+      <div class="value">1.65×</div>
+      <div class="sub"><span class="badge-good">HIGH VALIDATION</span></div>
+    </div>
+    <div class="metric-card highlight-a">
+      <div class="label">Share : Like Ratio</div>
+      <div class="value">1.5:1</div>
+      <div class="sub"><span class="badge-good">ELITE RARE</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Watch-through Rate</div>
+      <div class="value">7.6%</div>
+      <div class="sub"><span class="badge-warn">NEEDS WORK</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="label">3-sec View Rate</div>
+      <div class="value">30.1%</div>
+      <div class="sub">hook is working</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Profile Conversion</div>
+      <div class="value">0.11%</div>
+      <div class="sub"><span class="badge-bad">CRITICAL WEAK</span></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="section-label">Traffic & Interactions</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Traffic Source DNA</h3>
+      <div class="chart-wrap"><canvas id="aTrafficChart"></canvas></div>
+      <p class="chart-note">Stories dominant (39.2%) — strong follower push. Reels Tab at 26.7% signals organic discovery.</p>
+    </div>
+    <div class="chart-card">
+      <h3>Interaction Breakdown (Total: 221)</h3>
+      <div class="chart-wrap"><canvas id="aInteractionChart"></canvas></div>
+      <p class="chart-note">Shares (112) exceed Likes (72) — an elite viral signal. Saves (4) need improvement.</p>
+    </div>
+    <div class="chart-card">
+      <h3>Audience Split</h3>
+      <div class="chart-wrap-sm"><canvas id="aAudienceSplitChart"></canvas></div>
+      <p class="chart-note">62.4% followers — stronger follower dependency vs. Drift/Dream's wider non-follower reach.</p>
+    </div>
+    <div class="chart-card">
+      <h3>Gender Distribution</h3>
+      <div class="chart-wrap-sm"><canvas id="aGenderChart"></canvas></div>
+      <p class="chart-note">Male-dominated (70.9%) audience — consider tailoring CTAs for this demographic.</p>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="section-label">Deep Analytics</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Age Breakdown of Audience</h3>
+      <div class="chart-wrap"><canvas id="aAgeChart"></canvas></div>
+      <p class="chart-note">18–24 yr olds dominate at 42%. Combined 18–34 = 73% — core content demographic.</p>
+    </div>
+    <div class="chart-card">
+      <h3>Geographic Reach</h3>
+      <div class="chart-wrap"><canvas id="aGeoChart"></canvas></div>
+      <p class="chart-note">Lahore-first at 45%. 94% local dominance — international (6%) remains untapped.</p>
+    </div>
+    <div class="chart-card full">
+      <h3>Peak Activity Windows (24h)</h3>
+      <div class="chart-wrap-full"><canvas id="aPeakChart"></canvas></div>
+      <p class="chart-note">12PM–6PM is the golden posting window at 35% activity share. Avoid 12AM–6AM (13%).</p>
+    </div>
+  </div>
+
+  <!-- VELOCITY LINE CHART -->
+  <div class="section-label">Growth Velocity (First 12 Hours)</div>
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <h3>Views Over Time vs. Historical Benchmark</h3>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--accent-a)"></div>Androon Lahore</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#9ca3af"></div>Typical Benchmark</div>
+      </div>
+      <div class="chart-wrap-full"><canvas id="aVelocityChart"></canvas></div>
+      <p class="chart-note">91% above benchmark velocity. Viral ignition detected at ~1–2h post-launch.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 2 — DRIFT / DREAM                        -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="tab-drift" class="tab-panel">
+  <div class="reel-tag drift">● DRIFT / DREAM · 45s REEL</div>
+
+  <!-- KPI CARDS -->
+  <div class="section-label">Core Metrics</div>
+  <div class="metrics-grid">
+    <div class="metric-card highlight-d">
+      <div class="label">Total Views</div>
+      <div class="value">4,185</div>
+      <div class="sub">2.3× more than Androon</div>
+    </div>
+    <div class="metric-card highlight-g">
+      <div class="label">Total Engagements</div>
+      <div class="value">208</div>
+      <div class="sub">likes + shares + more</div>
+    </div>
+    <div class="metric-card highlight-p">
+      <div class="label">Watch-through Rate</div>
+      <div class="value">22.2%</div>
+      <div class="sub"><span class="badge-good">STRONG RETENTION</span></div>
+    </div>
+    <div class="metric-card highlight-gold">
+      <div class="label">3-sec View Rate</div>
+      <div class="value">35.2%</div>
+      <div class="sub"><span class="badge-good">BEST IN COMPARISON</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Non-follower Reach</div>
+      <div class="value">77.1%</div>
+      <div class="sub"><span class="badge-good">DISCOVERY BEAST</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Shares</div>
+      <div class="value">85</div>
+      <div class="sub">high organic push</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Likes</div>
+      <div class="value">93</div>
+      <div class="sub">likes &gt; shares here</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Saves</div>
+      <div class="value">3</div>
+      <div class="sub"><span class="badge-warn">LOW SAVES</span></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="section-label">Traffic & Interactions</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Traffic Source DNA</h3>
+      <div class="chart-wrap"><canvas id="dTrafficChart"></canvas></div>
+      <p class="chart-note">Stories at 55.1% — nearly double Androon's. Reels Tab only 12.9%, suggesting less algorithmic reach.</p>
+    </div>
+    <div class="chart-card">
+      <h3>Interaction Breakdown (Total: 208)</h3>
+      <div class="chart-wrap"><canvas id="dInteractionChart"></canvas></div>
+      <p class="chart-note">Likes (93) narrowly edge Shares (85) — near-parity. Comments (16) and Reposts (11) add depth.</p>
+    </div>
+    <div class="chart-card">
+      <h3>Audience Split</h3>
+      <div class="chart-wrap-sm"><canvas id="dAudienceSplitChart"></canvas></div>
+      <p class="chart-note">77.1% non-followers reached — exceptional discovery. Instagram is pushing this to new audiences.</p>
+    </div>
+    <div class="chart-card">
+      <h3>Retention Rates</h3>
+      <div class="chart-wrap-sm"><canvas id="dRetentionChart"></canvas></div>
+      <p class="chart-note">22.2% watch-through on a 45s video is strong. 35.2% 3-sec hook rate shows compelling opening.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 3 — HEAD-TO-HEAD COMPARISON              -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="tab-compare" class="tab-panel">
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+    <div class="reel-tag androon">● Androon Lahore · 1:59</div>
+    <div class="reel-tag drift">● Drift/Dream · 45s</div>
+  </div>
+
+  <!-- COMPARISON BARS -->
+  <div class="section-label">Performance at a Glance</div>
+  <div class="chart-card" style="margin-bottom:18px;">
+    <h3>Key Metric Comparison</h3>
+    <div id="comp-bars"></div>
+  </div>
+
+  <!-- COMPARISON CHARTS -->
+  <div class="section-label">Side-by-Side Charts</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Traffic Sources: Androon vs. Drift</h3>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--accent-a)"></div>Androon Lahore</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--accent-d)"></div>Drift/Dream</div>
+      </div>
+      <div class="chart-wrap-tall"><canvas id="cTrafficChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Engagement Types: Androon vs. Drift</h3>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--accent-a)"></div>Androon Lahore</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--accent-d)"></div>Drift/Dream</div>
+      </div>
+      <div class="chart-wrap-tall"><canvas id="cEngagementChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Audience Discovery (Followers vs. Non-followers)</h3>
+      <div class="chart-wrap-tall"><canvas id="cAudienceChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Retention: Hook & Watch-through Rates</h3>
+      <div class="chart-wrap-tall"><canvas id="cRetentionChart"></canvas></div>
+    </div>
+    <div class="chart-card full">
+      <h3>Views vs. Total Engagements (Radar Overview)</h3>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--accent-a)"></div>Androon Lahore</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--accent-d)"></div>Drift/Dream</div>
+      </div>
+      <div style="max-width:450px; margin:0 auto; height:300px; position:relative;"><canvas id="cRadarChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- VERDICT -->
+  <div class="verdict-box">
+    <h3>⚖️ Comparative Verdict</h3>
+    <div class="verdict-grid">
+      <div class="verdict-item">
+        <div class="v-label">Total Views Winner</div>
+        <div class="v-val">Drift/Dream <span class="winner-tag">+130%</span></div>
+        <div class="v-note">4,185 vs. 1,818 views</div>
+      </div>
+      <div class="verdict-item">
+        <div class="v-label">Viral Signal Winner</div>
+        <div class="v-val">Androon <span class="winner-tag">SHARES</span></div>
+        <div class="v-note">1.5:1 share-to-like ratio</div>
+      </div>
+      <div class="verdict-item">
+        <div class="v-label">Retention Winner</div>
+        <div class="v-val">Drift/Dream <span class="winner-tag">22.2%</span></div>
+        <div class="v-note">vs. 7.6% watch-through</div>
+      </div>
+      <div class="verdict-item">
+        <div class="v-label">Discovery Winner</div>
+        <div class="v-val">Drift/Dream <span class="winner-tag">77.1%</span></div>
+        <div class="v-note">non-follower reach dominance</div>
+      </div>
+      <div class="verdict-item">
+        <div class="v-label">Engagement Rate</div>
+        <div class="v-val">Androon <span class="winner-tag">19.6%</span></div>
+        <div class="v-note">4× industry average</div>
+      </div>
+      <div class="verdict-item">
+        <div class="v-label">Hook Strength</div>
+        <div class="v-val">Drift/Dream <span class="winner-tag">35.2%</span></div>
+        <div class="v-note">3-sec view rate edge</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TAB 4 — STRATEGY & INSIGHTS                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="tab-insights" class="tab-panel">
+  <div class="section-label">Androon Lahore — Strategic Debrief</div>
+  <div class="insight-grid">
+    <div class="insight-card strengths">
+      <h4 style="color:var(--accent-green)">✅ Strengths</h4>
+      <ul>
+        <li><span class="icon">🚀</span>91% above benchmark velocity in first 12h</li>
+        <li><span class="icon">🔥</span>Elite share-to-like ratio (1.56:1) — rare viral signal</li>
+        <li><span class="icon">📊</span>19.6% engagement rate — 4× industry average</li>
+        <li><span class="icon">👥</span>65.9% dual-source dominance (Stories + Reels Tab)</li>
+        <li><span class="icon">🎯</span>Strong male 18–34 demographic lock</li>
+        <li><span class="icon">🔁</span>1.65× replay rate — content being rewatched</li>
+      </ul>
+    </div>
+    <div class="insight-card alerts">
+      <h4 style="color:var(--accent-a)">⚠️ Critical Alerts</h4>
+      <ul>
+        <li><span class="icon">❌</span>Profile conversion 0.11% — only 2 new follows</li>
+        <li><span class="icon">⏱️</span>Avg watch time 9s on a 1:59 reel — needs 12s+</li>
+        <li><span class="icon">🌍</span>Explore reach only 4.4% — weak algorithmic discovery</li>
+        <li><span class="icon">🌐</span>International reach only 6% — untapped potential</li>
+        <li><span class="icon">📌</span>Only 4 saves — low content-save intent</li>
+        <li><span class="icon">📋</span>No follow-up content in pipeline</li>
+      </ul>
+    </div>
+    <div class="insight-card actions">
+      <h4 style="color:var(--accent-d)">🎯 Immediate Actions</h4>
+      <ul>
+        <li><span class="icon">1️⃣</span>Post Part 2 within 24 hours to ride current momentum</li>
+        <li><span class="icon">2️⃣</span>Add CTA: "Follow for Part 2" in video text</li>
+        <li><span class="icon">3️⃣</span>Optimize bio for profile visitors (currently arriving but not converting)</li>
+        <li><span class="icon">4️⃣</span>Reply to all 22 comments NOW — boosts ranking signal</li>
+        <li><span class="icon">5️⃣</span>Create "Androon Lahore" story highlight series</li>
+        <li><span class="icon">6️⃣</span>Shorten next reel to 60s to improve watch-through</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:28px;">Drift/Dream — Strategic Debrief</div>
+  <div class="insight-grid">
+    <div class="insight-card strengths">
+      <h4 style="color:var(--accent-green)">✅ Strengths</h4>
+      <ul>
+        <li><span class="icon">👁️</span>4,185 views — 2.3× more than Androon Lahore</li>
+        <li><span class="icon">🌐</span>77.1% non-follower reach — algorithm is distributing widely</li>
+        <li><span class="icon">🎣</span>35.2% 3-sec hook rate — compelling opening seconds</li>
+        <li><span class="icon">📺</span>22.2% watch-through on 45s — strong full-watch signal</li>
+        <li><span class="icon">📤</span>85 shares — strong pass-along behavior</li>
+      </ul>
+    </div>
+    <div class="insight-card alerts">
+      <h4 style="color:var(--accent-a)">⚠️ Gaps to Address</h4>
+      <ul>
+        <li><span class="icon">📌</span>Only 3 saves — almost no content archiving behavior</li>
+        <li><span class="icon">📊</span>Likes just barely edge shares — engagement depth could improve</li>
+        <li><span class="icon">🔍</span>Explore traffic only 1.0% — very low for a high-view reel</li>
+        <li><span class="icon">💬</span>Only 16 comments — conversation is shallow</li>
+      </ul>
+    </div>
+    <div class="insight-card actions">
+      <h4 style="color:var(--accent-d)">🎯 Growth Levers</h4>
+      <ul>
+        <li><span class="icon">1️⃣</span>Add a "Save this for later" prompt on-screen</li>
+        <li><span class="icon">2️⃣</span>Use a question caption to drive comment replies</li>
+        <li><span class="icon">3️⃣</span>Capitalize on 77% non-follower reach — add strong follow CTA</li>
+        <li><span class="icon">4️⃣</span>Test same content posted at 12PM–6PM (Androon's peak window)</li>
+        <li><span class="icon">5️⃣</span>Cross-post to Stories with "Watch full reel" swipe-up</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:28px;">Combined Formula — What's Working</div>
+  <div class="chart-card">
+    <h3>The Winning Content Recipe (Based on Both Reels)</h3>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:14px; margin-top:8px;">
+      <div style="background:#f0fdf4; border-radius:10px; padding:16px; border:1px solid #bbf7d0;">
+        <div style="font-weight:700; font-size:0.85rem; color:#15803d; margin-bottom:6px;">⏱️ Duration</div>
+        <div style="font-size:0.8rem; color:var(--muted);">45–60s sweet spot for watch-through. Under 60s outperforms 1:59 on retention despite lower total engagement.</div>
+      </div>
+      <div style="background:#eff6ff; border-radius:10px; padding:16px; border:1px solid #bfdbfe;">
+        <div style="font-weight:700; font-size:0.85rem; color:#1d4ed8; margin-bottom:6px;">📖 Story Sharing</div>
+        <div style="font-size:0.8rem; color:var(--muted);">Stories is the #1 traffic source in BOTH reels. Always share to stories within 30 min of posting.</div>
+      </div>
+      <div style="background:#fef3c7; border-radius:10px; padding:16px; border:1px solid #fde68a;">
+        <div style="font-weight:700; font-size:0.85rem; color:#92400e; margin-bottom:6px;">📤 Share Bait</div>
+        <div style="font-size:0.8rem; color:var(--muted);">Both reels generated high share counts. Content that sparks identity ("this is my city") drives sharing.</div>
+      </div>
+      <div style="background:#fdf2f8; border-radius:10px; padding:16px; border:1px solid #f9a8d4;">
+        <div style="font-weight:700; font-size:0.85rem; color:#9d174d; margin-bottom:6px;">🎣 The Hook</div>
+        <div style="font-size:0.8rem; color:var(--muted);">Drift/Dream's 35.2% 3-sec rate shows front-loading visual impact works. First frame must earn attention.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ─── TAB SWITCHING ─────────────────────────────────────
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── CHART DEFAULTS ────────────────────────────────────
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color = '#7a736a';
+Chart.defaults.plugins.legend.display = false;
+
+const gridColor = 'rgba(0,0,0,0.06)';
+
+// ══════════════════════════════════════════
+// ANDROON CHARTS
+// ══════════════════════════════════════════
+
+// Traffic
+new Chart(document.getElementById('aTrafficChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Explore','Profile','Feed','Reels Tab','Stories'],
+    datasets: [{
+      data: [4.4, 5.7, 15.4, 26.7, 39.2],
+      backgroundColor: ['#f97316','#eab308','#8b5cf6','#06b6d4','#e63946'],
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { callback: v => v + '%' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// Interactions
+new Chart(document.getElementById('aInteractionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Shares','Likes','Comments','Reposts','Saves'],
+    datasets: [{
+      data: [112, 72, 22, 10, 4],
+      backgroundColor: ['#e63946','#db2777','#06b6d4','#8b5cf6','#d4a017'],
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + ' interactions' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor } }
+    }
+  }
+});
+
+// Audience Split
+new Chart(document.getElementById('aAudienceSplitChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Followers','Non-Followers'],
+    datasets: [{ data: [62.4, 37.6], backgroundColor: ['#8b5cf6','#fbbf24'], hoverOffset: 6, borderWidth: 0 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { display: true, position: 'right', labels: { font: { size: 11 }, padding: 10 } },
+      tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } }
+    }
+  }
+});
+
+// Gender
+new Chart(document.getElementById('aGenderChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Men','Women'],
+    datasets: [{ data: [70.9, 29.1], backgroundColor: ['#06b6d4','#e63946'], hoverOffset: 6, borderWidth: 0 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { display: true, position: 'right', labels: { font: { size: 11 }, padding: 10 } },
+      tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } }
+    }
+  }
+});
+
+// Age
+new Chart(document.getElementById('aAgeChart'), {
+  type: 'bar',
+  data: {
+    labels: ['13–17','18–24','25–34','35–44','45+'],
+    datasets: [{
+      data: [8, 42, 31, 14, 5],
+      backgroundColor: ['#e0e7ff','#6366f1','#4338ca','#818cf8','#c7d2fe'],
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, ticks: { callback: v => v + '%' }, max: 50 }
+    }
+  }
+});
+
+// Geography
+new Chart(document.getElementById('aGeoChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Lahore','Karachi','Islamabad','Other PK','International'],
+    datasets: [{
+      data: [45, 22, 15, 12, 6],
+      backgroundColor: ['#e63946','#f97316','#eab308','#16a34a','#2563eb'],
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, ticks: { callback: v => v + '%' }, max: 55 }
+    }
+  }
+});
+
+// Peak Activity
+new Chart(document.getElementById('aPeakChart'), {
+  type: 'bar',
+  data: {
+    labels: ['12AM–6AM','6AM–12PM','12PM–6PM','6PM–12AM'],
+    datasets: [{
+      data: [13, 28, 35, 23],
+      backgroundColor: ['#dbeafe','#93c5fd','#1d4ed8','#60a5fa'],
+      borderRadius: 8, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + '% of activity' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, ticks: { callback: v => v + '%' } }
+    }
+  }
+});
+
+// Velocity (Androon)
+new Chart(document.getElementById('aVelocityChart'), {
+  type: 'line',
+  data: {
+    labels: [0,1,2,3,4,5,6,7,8,9,10,11,12],
+    datasets: [
+      {
+        label: 'Androon Lahore',
+        data: [0, 300, 800, 1200, 1350, 1500, 1580, 1640, 1680, 1720, 1760, 1800, 1818],
+        borderColor: '#e63946', backgroundColor: 'rgba(230,57,70,0.08)',
+        borderWidth: 3, fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 7,
+        pointBackgroundColor: '#e63946',
+      },
+      {
+        label: 'Benchmark',
+        data: [0, 80, 250, 420, 520, 600, 690, 750, 810, 850, 900, 940, 965],
+        borderColor: '#9ca3af', backgroundColor: 'transparent',
+        borderWidth: 2, borderDash: [6,4], fill: false, tension: 0.4,
+        pointRadius: 0,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, title: { display: true, text: 'Hours Since Post' } },
+      y: { grid: { color: gridColor }, title: { display: true, text: 'Total Views' } }
+    }
+  }
+});
+
+// ══════════════════════════════════════════
+// DRIFT CHARTS
+// ══════════════════════════════════════════
+
+new Chart(document.getElementById('dTrafficChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Explore','Reels Tab','Profile','Feed','Stories'],
+    datasets: [{
+      data: [1.0, 12.9, 10.2, 13.3, 55.1],
+      backgroundColor: ['#f97316','#06b6d4','#eab308','#8b5cf6','#2563eb'],
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { callback: v => v + '%' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('dInteractionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Likes','Shares','Comments','Reposts','Saves'],
+    datasets: [{
+      data: [93, 85, 16, 11, 3],
+      backgroundColor: ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'],
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + ' interactions' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor } }
+    }
+  }
+});
+
+new Chart(document.getElementById('dAudienceSplitChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Followers','Non-Followers'],
+    datasets: [{ data: [22.9, 77.1], backgroundColor: ['#60a5fa','#f97316'], hoverOffset: 6, borderWidth: 0 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { display: true, position: 'right', labels: { font: { size: 11 }, padding: 10 } },
+      tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('dRetentionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['3-sec View Rate','Watch-through Rate'],
+    datasets: [{
+      data: [35.2, 22.2],
+      backgroundColor: ['#2563eb','#60a5fa'],
+      borderRadius: 8, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, ticks: { callback: v => v + '%' }, max: 45 }
+    }
+  }
+});
+
+// ══════════════════════════════════════════
+// COMPARISON CHARTS
+// ══════════════════════════════════════════
+
+// Comparison bars (custom HTML)
+const compData = [
+  { label: 'Total Views', a: 1818, d: 4185, max: 4185, unit: '' },
+  { label: 'Watch-through Rate', a: 7.6, d: 22.2, max: 30, unit: '%' },
+  { label: '3-sec Hook Rate', a: 30.1, d: 35.2, max: 45, unit: '%' },
+  { label: 'Shares', a: 112, d: 85, max: 130, unit: '' },
+  { label: 'Non-follower Reach', a: 37.6, d: 77.1, max: 100, unit: '%' },
+  { label: 'Engagement Rate', a: 19.6, d: 4.97, max: 25, unit: '%' },
+];
+
+const barsHtml = compData.map(d => `
+  <div class="comp-bar-wrap" style="margin-bottom:16px;">
+    <div class="comp-label">
+      <span>${d.label}</span>
+      <span style="display:flex;gap:12px;">
+        <span style="color:var(--accent-a)">A: ${d.a}${d.unit}</span>
+        <span style="color:var(--accent-d)">D: ${d.d}${d.unit}</span>
+      </span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:0.68rem;width:16px;color:var(--accent-a);font-weight:700;">A</span>
+        <div class="comp-bar-track" style="flex:1;">
+          <div class="comp-bar-fill a" style="width:${(d.a/d.max*100).toFixed(1)}%"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:0.68rem;width:16px;color:var(--accent-d);font-weight:700;">D</span>
+        <div class="comp-bar-track" style="flex:1;">
+          <div class="comp-bar-fill d" style="width:${(d.d/d.max*100).toFixed(1)}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+`).join('');
+document.getElementById('comp-bars').innerHTML = barsHtml;
+
+// Traffic comparison
+new Chart(document.getElementById('cTrafficChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Stories','Feed','Reels Tab','Profile','Explore'],
+    datasets: [
+      { label: 'Androon', data: [39.2, 15.4, 26.7, 5.7, 4.4], backgroundColor: '#e63946', borderRadius: 4 },
+      { label: 'Drift',   data: [55.1, 13.3, 12.9, 10.2, 1.0], backgroundColor: '#2563eb', borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, ticks: { callback: v => v + '%' } }
+    }
+  }
+});
+
+// Engagement comparison
+new Chart(document.getElementById('cEngagementChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Likes','Shares','Comments'],
+    datasets: [
+      { label: 'Androon', data: [72, 112, 22], backgroundColor: '#e63946', borderRadius: 4 },
+      { label: 'Drift',   data: [93, 85, 16],  backgroundColor: '#2563eb', borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 } } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor } }
+    }
+  }
+});
+
+// Audience
+new Chart(document.getElementById('cAudienceChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Androon Lahore','Drift/Dream'],
+    datasets: [
+      { label: 'Followers',     data: [62.4, 22.9], backgroundColor: '#16a34a', borderRadius: [4,4,0,0] },
+      { label: 'Non-Followers', data: [37.6, 77.1], backgroundColor: '#f97316', borderRadius: [4,4,0,0] }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { display: false }, stacked: true },
+      y: { grid: { color: gridColor }, stacked: true, ticks: { callback: v => v + '%' }, max: 100 }
+    }
+  }
+});
+
+// Retention comparison
+new Chart(document.getElementById('cRetentionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['3-sec View Rate','Watch-through Rate'],
+    datasets: [
+      { label: 'Androon', data: [30.1, 7.6],  backgroundColor: '#e63946', borderRadius: 4 },
+      { label: 'Drift',   data: [35.2, 22.2], backgroundColor: '#2563eb', borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: c => ' ' + c.raw + '%' } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, ticks: { callback: v => v + '%' }, max: 45 }
+    }
+  }
+});
+
+// Radar
+new Chart(document.getElementById('cRadarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Views\n(÷100)','Eng. Rate','Watch-\nthrough','Hook\nRate','Shares','Non-follower\nReach'],
+    datasets: [
+      {
+        label: 'Androon',
+        data: [18.18, 19.6, 7.6, 30.1, 56, 37.6],
+        borderColor: '#e63946', backgroundColor: 'rgba(230,57,70,0.15)',
+        borderWidth: 2, pointBackgroundColor: '#e63946', pointRadius: 4
+      },
+      {
+        label: 'Drift/Dream',
+        data: [41.85, 4.97, 22.2, 35.2, 42.5, 77.1],
+        borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)',
+        borderWidth: 2, pointBackgroundColor: '#2563eb', pointRadius: 4
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 } } } },
+    scales: {
+      r: {
+        grid: { color: 'rgba(0,0,0,0.08)' },
+        ticks: { display: false },
+        pointLabels: { font: { size: 10 } }
+      }
+    }
+  }
+});
+
+</script>
+</body>
+</html>
